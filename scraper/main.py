@@ -1,91 +1,96 @@
 # scraper/main.py
 
+import time
 from typing import Optional
 import httpx
 from bs4 import BeautifulSoup
+from playwright.sync_api import sync_playwright, TimeoutError
 from sqlmodel import Field, Session, SQLModel, create_engine, select
+
 
 class Job(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     title: str
     company: str
     location: str
-    url: str
+    url: str = Field(unique=True)
 
 DATABASE_URL = "sqlite:///jobs.db"
 engine = create_engine(DATABASE_URL)
 
-def clean_location_string(location: str) -> str:
-    """Remove duplicatas de uma string de localização separada por vírgulas."""
-    if not location:
-        return "N/A"
-    # Converte p/ minúsculas, divide por vírgula, remove espaços, remove duplicatas e junta
-    parts = [part.strip() for part in location.lower().split(',')]
-    unique_parts = sorted(list(set(parts)), key=parts.index)
-
-    return ', '.join(part.capitalize() for part in unique_parts)
-
 def create_db_and_tables():
     SQLModel.metadata.create_all(engine)
 
-def run_scraper():
+def run_linkedin_scraper():
     """
-    Coleta as vagas de emprego do site Python.org e as salva no banco de dados.
+    Coleta vagas de emprego do LinkedIn usando Playwright para lidar com conteúdo dinâmico
+    e salva no banco de dados.
     """
-    URL_TARGET = "https://www.python.org/jobs/"
+    url = "https://br.linkedin.com/jobs/search?keywords=&geoId=102556749&f_E=2&f_TPR=r86400&sortBy=R"
 
-    print("Iniciando a coleta de vagas...")
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=False) 
+        page = browser.new_page()
 
-    response = httpx.get(URL_TARGET)
+        print(f"Acessando a página: {url}")
+        page.goto(url, timeout=90000)
 
-    if response.status_code != 200:
-        print(f"Erro ao acessar a página. Status: {response.status_code}")
-        return
+        print("Página acessada. Tentando fechar modais e rolar a página...")
 
-    print("Página acessada com sucesso. Analisando o HTML...")
+        try:
+            modal_close_button_selector = "button.modal__dismiss"
+            page.wait_for_selector(modal_close_button_selector, timeout=5000)
+            page.click(modal_close_button_selector)
+            print("Modal de login fechado.")
+        except TimeoutError:
+            print("Nenhum modal de login encontrado, continuando...")
 
-    soup = BeautifulSoup(response.content, "lxml")
+        for _ in range(5): # Rola 5x
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
+            time.sleep(2)
 
-    job_list = soup.select(".list-recent-jobs > li")
+        list_selector = "ul.jobs-search__results-list"
+        page.wait_for_selector(list_selector)
 
-    new_jobs_found = 0
+        print("Coletando o HTML final da página...")
+        page_content = page.content()
 
-    with Session(engine) as session:
-        for job_item in job_list:
-            title_element = job_item.select_one("span.listing-company-name > a")
+        soup = BeautifulSoup(page_content, "lxml")
 
-            if "New " in title_element.text:
-                title = title_element.text.replace("New ", "").strip()
-            else:
-                title = title_element.text
+        job_cards = soup.select('div.base-search-card')
 
-            br_tag = job_item.find("br")
-            company_text = br_tag.next_sibling.strip() if br_tag and br_tag.next_sibling else ""
+        print(f"Encontradas {len(job_cards)} vagas na página. Salvando no banco de dados...")
 
-            location_element = job_item.select_one("span.listing-location")
-            location = location_element.text.strip() if location_element else "N/A"
+        new_jobs_found = 0
+        with Session(engine) as session:
+            for card in job_cards:
+                title_element = card.select_one("h3.base-search-card__title")
+                company_element = card.select_one("h4.base-search-card__subtitle a")
+                location_element = card.select_one("span.job-search-card__location")
+                url_element = card.select_one("a.base-card__full-link")
 
-            location = clean_location_string(location)
+                title = title_element.text.strip() if title_element else "N/A"
+                company = company_element.text.strip() if company_element else "N/A"
+                location = location_element.text.strip() if location_element else "N/A"
+                url = url_element['href'] if url_element else "N/A"
 
-            company = company_text if company_text else "N/A"
-            title = title_element.text.strip() if title_element else "N/A"
-            url = f"https://www.python.org{title_element['href']}" if title_element else "N/A"
+                if title != "N/A" and url != "N/A":
+                    # Vaga já existe?
+                    statement = select(Job).where(Job.url == url)
+                    existing_job = session.exec(statement).first()
 
-            statement = select(Job).where(Job.url == url)
-            existing_job = session.exec(statement).first()
+                    if not existing_job:
+                        job = Job(title=title, company=company, location=location, url=url)
+                        session.add(job)
+                        new_jobs_found += 1
 
-            if existing_job:
-                continue
+            session.commit()
 
-            job = Job(title=title, company=company, location=location, url=url)
-            session.add(job)
-            new_jobs_found += 1
+        print(f"Coleta finalizada. {new_jobs_found} novas vagas foram adicionadas ao banco de dados.")
+        browser.close()
 
-        session.commit()
-
-    print(f"Coleta Finalizada. {new_jobs_found} novas vagas formas salvas no banco de dados.")
 
 if __name__ == "__main__":
     print("Preparando o banco de dados...")
     create_db_and_tables()
-    run_scraper()
+    run_linkedin_scraper()
