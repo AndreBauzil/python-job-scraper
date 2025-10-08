@@ -61,7 +61,7 @@ Siga os passos abaixo para configurar e rodar a aplicação.
 
 #### 1. Clonar o Repositório
 ```bash
-git clone https://URL_DO_SEU_REPOSITORIO
+git clone https://github.com/AndreBauzil/python-job-scraper
 cd python-job-scraper
 ```
 
