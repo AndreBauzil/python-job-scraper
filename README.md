@@ -1,32 +1,30 @@
-# Job Scraper & Analytics Dashboard
+# Job Scraper & Analytics Dashboard (LinkedIn)
 
 **Status do Projeto: Concluído (Versão 1.0)**
 
-Este projeto é um sistema full-stack de automação e análise de dados. Ele consiste em um web scraper desenvolvido em Python que coleta vagas de emprego de sites públicos, uma API RESTful (também em Python) para servir esses dados, e um dashboard interativo em React para visualização e filtragem.
+Este projeto é um sistema full-stack de automação e análise de dados. Ele consiste em um web scraper avançado que utiliza **Playwright** para coletar dados de vagas de emprego diretamente do **LinkedIn**, uma API RESTful em **Python/FastAPI** para servir esses dados, e um dashboard interativo em **React** para visualização e filtragem.
 
 ### Screenshots
 
-| Dashboard de Análise | Documentação da API (Automática) |
-| :---: | :---: |
-| ![Dashboard de Análise](./assets/) | ![Documentação da API](./assets/) |
-
-*(Instrução: Adicione os prints na raiz do projeto ou em uma pasta `assets` e atualize os caminhos. Recomendo tirar um print do dashboard e outro da página `http://localhost:8000/docs` para mostrar a documentação automática do FastAPI).*
+| Dashboard de Análise |
+| :---: |
+| ![Dashboard de Análise](assets/dashboard.png) |
 
 ---
 
 ### Destaques para Recrutadores
 
-Este projeto foi desenvolvido para demonstrar um conjunto de habilidades que vão além de um simples CRUD, focando em arquitetura de sistemas, engenharia de dados e visualização.
+Este projeto demonstra competências que vão além de um CRUD básico, focando em desafios realistas de engenharia e visualização de dados.
 
-* **Arquitetura Full-Stack Poliglota:** Demonstra a capacidade de integrar um backend em **Python (FastAPI)** com um frontend em **JavaScript/TypeScript (React)**, uma arquitetura comum em microserviços.
-* **Engenharia de Dados (Ponta a Ponta):** Cobre o ciclo de vida completo de um projeto de dados:
-    * **Coleta:** Web scraping com `BeautifulSoup` e `HTTPX`.
-    * **Armazenamento:** Persistência de dados em um banco de dados relacional (SQLite/PostgreSQL) gerenciado via ORM com **SQLModel**.
-    * **Processamento:** Lógica de agregação no backend para gerar analytics (ex: contagem de vagas por cidade).
-    * **Visualização:** Apresentação dos dados brutos e agregados em um dashboard com tabelas, filtros e gráficos (`Recharts`).
-* **API RESTful Moderna:** A API desenvolvida com **FastAPI** inclui documentação interativa automática (Swagger UI), validação de dados com Pydantic e boas práticas de design de API.
-* **Boas Práticas de Desenvolvimento Python:** Uso de ambientes virtuais (`venv`), modularização do código (roteadores, serviços) e ORM para interação segura com o banco de dados.
-* **Frontend Reativo e Profissional:** Utilização da mesma stack moderna do projeto anterior (**Vite, React, TypeScript, Tailwind CSS, Shadcn/ui**), demonstrando consistência e domínio das ferramentas.
+* **Scraping de Sites Dinâmicos (JavaScript-heavy):** Utilização do **Playwright** para controlar um navegador headless, aguardar o carregamento de conteúdo dinâmico, interagir com a página (rolagem, fechar modais) e extrair dados de uma plataforma complexa e protegida como o LinkedIn.
+* **Arquitetura Full-Stack Poliglota:** Integração de um backend em **Python (FastAPI)** com um frontend em **JavaScript/TypeScript (React)**, simulando uma arquitetura de microserviços.
+* **Ciclo Completo de Engenharia de Dados:**
+    * **Coleta:** Web scraping avançado e robusto.
+    * **Armazenamento:** Persistência em banco de dados relacional (SQLite) com ORM (**SQLModel**).
+    * **Processamento:** Lógica de agregação no backend para gerar analytics (contagem de vagas por cidade).
+    * **Visualização:** Apresentação dos dados em um dashboard interativo com tabelas, filtros e gráficos (`Recharts`).
+* **API RESTful Moderna:** API com **FastAPI** que inclui documentação interativa automática (Swagger UI), validação de dados com Pydantic e design de API modular com `APIRouter`.
+* **Frontend Reativo e Profissional:** UI construída com **Vite, React, TypeScript, Tailwind CSS e Shadcn/ui**, demonstrando domínio de um ecossistema de frontend moderno e produtivo.
 
 ---
 
@@ -34,11 +32,11 @@ Este projeto foi desenvolvido para demonstrar um conjunto de habilidades que vã
 
 #### **Backend**
 * **Python 3.11+**
-* **FastAPI** (Framework da API)
-* **Uvicorn** (Servidor ASGI)
-* **SQLModel** (ORM) & **SQLAlchemy**
-* **HTTPX** (Cliente HTTP)
+* **Playwright** (Web Scraping de sites dinâmicos)
 * **BeautifulSoup4** (HTML Parsing)
+* **FastAPI** (Framework da API)
+* **SQLModel** (ORM) & **SQLAlchemy**
+* **Uvicorn** (Servidor ASGI)
 * **SQLite** (Banco de Dados)
 
 #### **Frontend**
@@ -52,21 +50,53 @@ Este projeto foi desenvolvido para demonstrar um conjunto de habilidades que vã
 
 ---
 
-### Funcionalidades Implementadas
-
-* **Web Scraper:** Script automatizado que coleta vagas de emprego do site `python.org/jobs`.
-* **API RESTful:**
-    * Endpoint `GET /vagas` com filtros dinâmicos por título e empresa.
-    * Endpoint de analytics `GET /analytics/top-cities` para dados do gráfico.
-    * Documentação interativa automática em `/docs`.
-* **Dashboard Interativo:**
-    * Tabela com todas as vagas coletadas.
-    * Filtros em tempo real.
-    * Cards com métricas (Total de vagas, empresas únicas).
-    * Gráfico de barras com o "Top 5 Cidades com Mais Vagas".
-
----
-
 ### Como Executar o Projeto Localmente
 
-*(As instruções de setup continuam as mesmas)*
+Siga os passos abaixo para configurar e rodar a aplicação.
+
+#### Pré-requisitos
+* Node.js (v18+) e NPM
+* Python (v3.11+)
+* Docker (Opcional, se for usar PostgreSQL no futuro)
+
+#### 1. Clonar o Repositório
+```bash
+git clone https://URL_DO_SEU_REPOSITORIO
+cd python-job-scraper
+```
+
+#### 2. Configurar o Backend (Python)
+```bash
+# Crie e ative o ambiente virtual
+python -m venv venv
+# Windows
+.\venv\Scripts\activate
+# Mac/Linux
+source venv/bin/activate
+
+# Instale as dependências Python
+pip install sqlmodel httpx beautifulsoup4 lxml "fastapi[all]" playwright
+
+# Instale os navegadores para o Playwright
+playwright install
+
+# Rode o scraper para popular o banco de dados
+python scraper/main.py
+
+# Inicie o servidor da API
+python -m uvicorn api.main:app --reload
+# A API estará rodando em http://localhost:8000
+```
+
+#### 3. Configurar o Frontend (React)
+```bash
+# Em um novo terminal, navegue para a pasta do frontend
+cd frontend
+
+# Instale as dependências
+npm install
+
+# Inicie a aplicação React
+npm run dev
+# A aplicação estará disponível em http://localhost:5173
+```
